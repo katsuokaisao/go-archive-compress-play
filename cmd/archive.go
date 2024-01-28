@@ -193,7 +193,7 @@ func archiveTarBz2(archiveInputDirName, archiveOutputFileName string) error {
 	}
 	defer bzip2Writer.Close()
 
-	tarWriter := tar.NewWriter(dest)
+	tarWriter := tar.NewWriter(bzip2Writer)
 	defer tarWriter.Close()
 
 	return archiveTar(archiveInputDirName, tarWriter)

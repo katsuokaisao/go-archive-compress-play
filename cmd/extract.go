@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/dsnet/compress/bzip2"
 	"github.com/spf13/cobra"
 )
 
@@ -75,6 +76,21 @@ var extractTarGzCmd = &cobra.Command{
 
 var extractTarBz2Cmd = &cobra.Command{
 	Use: "tar.bz2",
+	Run: func(cmd *cobra.Command, args []string) {
+		extractInputFileName := extractInputFileName
+		extractOutputDirName := extractOutputDirName
+		if extractInputFileName == "" {
+			panic("input option is empty")
+		}
+		if extractOutputDirName == "" {
+			panic("output option is empty")
+		}
+
+		if err := extractTarBz2(extractInputFileName, extractOutputDirName); err != nil {
+			panic(err)
+		}
+		fmt.Printf("extract tar.bz2 %s %s\n", extractInputFileName, extractOutputDirName)
+	},
 }
 
 func extractZip(extractInputFileName, extractOutputDirName string) error {
@@ -145,6 +161,23 @@ func extractTarGz(extractInputFileName, extractOutputDirName string) error {
 	defer gzr.Close()
 
 	tarReader := tar.NewReader(gzr)
+
+	return extractTar(extractOutputDirName, tarReader)
+}
+
+func extractTarBz2(extractInputFileName, extractOutputDirName string) error {
+	f, err := os.Open(extractInputFileName)
+	if err != nil {
+		return err
+	}
+
+	bzr, err := bzip2.NewReader(f, nil)
+	if err != nil {
+		return err
+	}
+	defer bzr.Close()
+
+	tarReader := tar.NewReader(bzr)
 
 	return extractTar(extractOutputDirName, tarReader)
 }

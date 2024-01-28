@@ -3,6 +3,7 @@ package cmd
 import (
 	"archive/tar"
 	"archive/zip"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
@@ -46,7 +47,7 @@ var extractTarCmd = &cobra.Command{
 			panic("output option is empty")
 		}
 
-		if err := extractTar(extractInputFileName, extractOutputDirName); err != nil {
+		if err := extractTarNoCompression(extractInputFileName, extractOutputDirName); err != nil {
 			panic(err)
 		}
 		fmt.Printf("extract tar %s %s\n", extractInputFileName, extractOutputDirName)
@@ -55,6 +56,21 @@ var extractTarCmd = &cobra.Command{
 
 var extractTarGzCmd = &cobra.Command{
 	Use: "tar.gz",
+	Run: func(cmd *cobra.Command, args []string) {
+		extractInputFileName := extractInputFileName
+		extractOutputDirName := extractOutputDirName
+		if extractInputFileName == "" {
+			panic("input option is empty")
+		}
+		if extractOutputDirName == "" {
+			panic("output option is empty")
+		}
+
+		if err := extractTarGz(extractInputFileName, extractOutputDirName); err != nil {
+			panic(err)
+		}
+		fmt.Printf("extract tar.gz %s %s\n", extractInputFileName, extractOutputDirName)
+	},
 }
 
 var extractTarBz2Cmd = &cobra.Command{
@@ -105,7 +121,7 @@ func copyZip(f *zip.File, extractOutputDirName string) error {
 	return nil
 }
 
-func extractTar(extractInputFileName, extractOutputDirName string) error {
+func extractTarNoCompression(extractInputFileName, extractOutputDirName string) error {
 	f, err := os.Open(extractInputFileName)
 	if err != nil {
 		return err
@@ -113,6 +129,27 @@ func extractTar(extractInputFileName, extractOutputDirName string) error {
 
 	tarReader := tar.NewReader(f)
 
+	return extractTar(extractOutputDirName, tarReader)
+}
+
+func extractTarGz(extractInputFileName, extractOutputDirName string) error {
+	f, err := os.Open(extractInputFileName)
+	if err != nil {
+		return err
+	}
+
+	gzr, err := gzip.NewReader(f)
+	if err != nil {
+		return err
+	}
+	defer gzr.Close()
+
+	tarReader := tar.NewReader(gzr)
+
+	return extractTar(extractOutputDirName, tarReader)
+}
+
+func extractTar(extractOutputDirName string, tarReader *tar.Reader) error {
 	for {
 		isEOF, err := copyTar(tarReader, extractOutputDirName)
 		if err != nil {

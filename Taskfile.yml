@@ -16,6 +16,9 @@ tasks:
   a-tar-gz:
     cmds:
       - go run main.go archive tar.gz --input sample/archive/input --output sample/archive/output/sample.tar.gz
+  e-tar-gz:
+    cmds:
+      - go run main.go extract tar.gz --input sample/extract/input/sample.tar.gz --output sample/extract/output/
   a-tar-bz2:
     cmds:
       - go run main.go archive tar.bz2 --input sample/archive/input --output sample/archive/output/sample.tar.bz2

@@ -2,4 +2,9 @@ sample/**/output/*
 sample/**/output/**/*
 !sample/**/output/.gitkeep
 
+sample/compress/input/*
+sample/decompress/input/*
+!sample/compress/input/.gitkeep
+!sample/decompress/input/.gitkeep
+
 .DS_Store

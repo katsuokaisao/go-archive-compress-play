@@ -164,25 +164,6 @@ func archiveTarNoCompress(archiveInputDirName, archiveOutputFileName string) err
 	return archiveTar(archiveInputDirName, tarWriter)
 }
 
-func archiveTar(archiveInputDirName string, tarWriter *tar.Writer) error {
-	if err := filepath.Walk(archiveInputDirName, func(path string, info fs.FileInfo, err error) error {
-		fmt.Printf("path: %s\n", path)
-		if info.IsDir() {
-			return nil
-		}
-
-		if err := addToTar(path, archiveInputDirName, tarWriter); err != nil {
-			return err
-		}
-
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func archiveTarGz(archiveInputDirName, archiveOutputFileName string) error {
 	dest, err := os.Create(archiveOutputFileName)
 	if err != nil {
@@ -218,6 +199,25 @@ func archiveTarBz2(archiveInputDirName, archiveOutputFileName string) error {
 	return archiveTar(archiveInputDirName, tarWriter)
 }
 
+func archiveTar(archiveInputDirName string, tarWriter *tar.Writer) error {
+	if err := filepath.Walk(archiveInputDirName, func(path string, info fs.FileInfo, err error) error {
+		fmt.Printf("path: %s\n", path)
+		if info.IsDir() {
+			return nil
+		}
+
+		if err := addToTar(path, archiveInputDirName, tarWriter); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func addToTar(srcFileName, archiveInputDirName string, tarWriter *tar.Writer) error {
 	src, err := os.Open(srcFileName)
 	if err != nil {
@@ -225,28 +225,28 @@ func addToTar(srcFileName, archiveInputDirName string, tarWriter *tar.Writer) er
 	}
 	defer src.Close()
 
-	data := make([]byte, 1024)
-	if _, err := src.Read(data); err != nil {
-		return err
-	}
-
 	tarFileName, err := filepath.Rel(archiveInputDirName, srcFileName)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("tarFileName: %s\n", tarFileName)
 
-	hdr := &tar.Header{
-		Name: tarFileName,
-		Mode: 0600,
-		Size: int64(len(data)),
-	}
-
-	if err := tarWriter.WriteHeader(hdr); err != nil {
+	fileInfo, err := src.Stat()
+	if err != nil {
 		return err
 	}
 
-	if _, err := tarWriter.Write(data); err != nil {
+	hdr := &tar.Header{
+		Name: tarFileName,
+		Size: fileInfo.Size(),
+	}
+
+	if err := tarWriter.WriteHeader(hdr); err != nil {
+		return fmt.Errorf("failed to write tar header: %w", err)
+	}
+
+	_, err = io.Copy(tarWriter, src)
+	if err != nil {
 		return err
 	}
 

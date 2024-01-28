@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/dsnet/compress/bzip2"
 	"github.com/spf13/cobra"
 )
 
@@ -76,6 +77,21 @@ var archiveTarGzCmd = &cobra.Command{
 
 var archiveTarBz2Cmd = &cobra.Command{
 	Use: "tar.bz2",
+	Run: func(cmd *cobra.Command, args []string) {
+		archiveInputDirName := archiveInputDirName
+		archiveOutputFileName := archiveOutputFileName
+		if archiveInputDirName == "" {
+			panic("input option is empty")
+		}
+		if archiveOutputFileName == "" {
+			panic("output option is empty")
+		}
+
+		if err := archiveTarBz2(archiveInputDirName, archiveOutputFileName); err != nil {
+			panic(err)
+		}
+		fmt.Printf("archive tar.bz2 %s %s\n", archiveInputDirName, archiveOutputFileName)
+	},
 }
 
 func archiveZip(archiveInputDirName, archiveOutputFileName string) error {
@@ -148,22 +164,6 @@ func archiveTarNoCompress(archiveInputDirName, archiveOutputFileName string) err
 	return archiveTar(archiveInputDirName, tarWriter)
 }
 
-func archiveTarGz(archiveInputDirName, archiveOutputFileName string) error {
-	dest, err := os.Create(archiveOutputFileName)
-	if err != nil {
-		return err
-	}
-	defer dest.Close()
-
-	gzipWriter := gzip.NewWriter(dest)
-	defer gzipWriter.Close()
-
-	tarWriter := tar.NewWriter(gzipWriter)
-	defer tarWriter.Close()
-
-	return archiveTar(archiveInputDirName, tarWriter)
-}
-
 func archiveTar(archiveInputDirName string, tarWriter *tar.Writer) error {
 	if err := filepath.Walk(archiveInputDirName, func(path string, info fs.FileInfo, err error) error {
 		fmt.Printf("path: %s\n", path)
@@ -181,6 +181,41 @@ func archiveTar(archiveInputDirName string, tarWriter *tar.Writer) error {
 	}
 
 	return nil
+}
+
+func archiveTarGz(archiveInputDirName, archiveOutputFileName string) error {
+	dest, err := os.Create(archiveOutputFileName)
+	if err != nil {
+		return err
+	}
+	defer dest.Close()
+
+	gzipWriter := gzip.NewWriter(dest)
+	defer gzipWriter.Close()
+
+	tarWriter := tar.NewWriter(gzipWriter)
+	defer tarWriter.Close()
+
+	return archiveTar(archiveInputDirName, tarWriter)
+}
+
+func archiveTarBz2(archiveInputDirName, archiveOutputFileName string) error {
+	dest, err := os.Create(archiveOutputFileName)
+	if err != nil {
+		return err
+	}
+	defer dest.Close()
+
+	bzip2Writer, err := bzip2.NewWriter(dest, nil)
+	if err != nil {
+		return err
+	}
+	defer bzip2Writer.Close()
+
+	tarWriter := tar.NewWriter(dest)
+	defer tarWriter.Close()
+
+	return archiveTar(archiveInputDirName, tarWriter)
 }
 
 func addToTar(srcFileName, archiveInputDirName string, tarWriter *tar.Writer) error {

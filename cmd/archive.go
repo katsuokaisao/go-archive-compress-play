@@ -3,6 +3,7 @@ package cmd
 import (
 	"archive/tar"
 	"archive/zip"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"io/fs"
@@ -47,7 +48,7 @@ var archiveTarCmd = &cobra.Command{
 			panic("output option is empty")
 		}
 
-		if err := archiveTar(archiveInputDirName, archiveOutputFileName); err != nil {
+		if err := archiveTarNoCompress(archiveInputDirName, archiveOutputFileName); err != nil {
 			panic(err)
 		}
 		fmt.Printf("archive tar %s %s\n", archiveInputDirName, archiveOutputFileName)
@@ -56,6 +57,21 @@ var archiveTarCmd = &cobra.Command{
 
 var archiveTarGzCmd = &cobra.Command{
 	Use: "tar.gz",
+	Run: func(cmd *cobra.Command, args []string) {
+		archiveInputDirName := archiveInputDirName
+		archiveOutputFileName := archiveOutputFileName
+		if archiveInputDirName == "" {
+			panic("input option is empty")
+		}
+		if archiveOutputFileName == "" {
+			panic("output option is empty")
+		}
+
+		if err := archiveTarGz(archiveInputDirName, archiveOutputFileName); err != nil {
+			panic(err)
+		}
+		fmt.Printf("archive tar.gz %s %s\n", archiveInputDirName, archiveOutputFileName)
+	},
 }
 
 var archiveTarBz2Cmd = &cobra.Command{
@@ -119,7 +135,7 @@ func addToZip(srcFileName, archiveInputDirName string, zipWriter *zip.Writer) er
 	return nil
 }
 
-func archiveTar(archiveInputDirName, archiveOutputFileName string) error {
+func archiveTarNoCompress(archiveInputDirName, archiveOutputFileName string) error {
 	dest, err := os.Create(archiveOutputFileName)
 	if err != nil {
 		return err
@@ -129,6 +145,26 @@ func archiveTar(archiveInputDirName, archiveOutputFileName string) error {
 	tarWriter := tar.NewWriter(dest)
 	defer tarWriter.Close()
 
+	return archiveTar(archiveInputDirName, tarWriter)
+}
+
+func archiveTarGz(archiveInputDirName, archiveOutputFileName string) error {
+	dest, err := os.Create(archiveOutputFileName)
+	if err != nil {
+		return err
+	}
+	defer dest.Close()
+
+	gzipWriter := gzip.NewWriter(dest)
+	defer gzipWriter.Close()
+
+	tarWriter := tar.NewWriter(gzipWriter)
+	defer tarWriter.Close()
+
+	return archiveTar(archiveInputDirName, tarWriter)
+}
+
+func archiveTar(archiveInputDirName string, tarWriter *tar.Writer) error {
 	if err := filepath.Walk(archiveInputDirName, func(path string, info fs.FileInfo, err error) error {
 		fmt.Printf("path: %s\n", path)
 		if info.IsDir() {

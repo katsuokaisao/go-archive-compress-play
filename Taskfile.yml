@@ -13,3 +13,6 @@ tasks:
   e-tar:
     cmds:
       - go run main.go extract tar --input sample/extract/input/sample.tar --output sample/extract/output/
+  a-tar-gz:
+    cmds:
+      - go run main.go archive tar.gz --input sample/archive/input --output sample/archive/output/sample.tar.gz

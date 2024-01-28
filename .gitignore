@@ -1,0 +1,5 @@
+sample/**/output/*
+sample/**/output/**/*
+!sample/**/output/.gitkeep
+
+.DS_Store

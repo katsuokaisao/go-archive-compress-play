@@ -53,7 +53,7 @@ func extractZip(extractInputFileName, extractOutputDirName string) error {
 
 	for _, f := range r.File {
 		fmt.Printf("zip file name: %s\n", f.Name)
-		if err := copyToZip(f, extractOutputDirName); err != nil {
+		if err := copyZip(f, extractOutputDirName); err != nil {
 			return err
 		}
 	}
@@ -61,7 +61,7 @@ func extractZip(extractInputFileName, extractOutputDirName string) error {
 	return nil
 }
 
-func copyToZip(f *zip.File, extractOutputDirName string) error {
+func copyZip(f *zip.File, extractOutputDirName string) error {
 	dir := filepath.Dir(f.Name)
 	if dir != "" {
 		if err := os.MkdirAll(filepath.Join(extractOutputDirName, dir), 0755); err != nil {

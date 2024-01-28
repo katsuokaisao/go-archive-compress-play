@@ -27,7 +27,7 @@ var archiveZipCmd = &cobra.Command{
 			panic("output option is empty")
 		}
 
-		if err := zipArchive(archiveInputDirName, archiveOutputFileName); err != nil {
+		if err := archiveZip(archiveInputDirName, archiveOutputFileName); err != nil {
 			panic(err)
 		}
 		fmt.Printf("archive zip %s %s\n", archiveInputDirName, archiveOutputFileName)
@@ -46,7 +46,7 @@ var archiveTarBz2Cmd = &cobra.Command{
 	Use: "tar.bz2",
 }
 
-func zipArchive(archiveInputDirName, archiveOutputFileName string) error {
+func archiveZip(archiveInputDirName, archiveOutputFileName string) error {
 	dest, err := os.Create(archiveOutputFileName)
 	if err != nil {
 		return err

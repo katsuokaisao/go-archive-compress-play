@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"fmt"
 	"io"
@@ -35,6 +36,21 @@ var extractZipCmd = &cobra.Command{
 
 var extractTarCmd = &cobra.Command{
 	Use: "tar",
+	Run: func(cmd *cobra.Command, args []string) {
+		extractInputFileName := extractInputFileName
+		extractOutputDirName := extractOutputDirName
+		if extractInputFileName == "" {
+			panic("input option is empty")
+		}
+		if extractOutputDirName == "" {
+			panic("output option is empty")
+		}
+
+		if err := extractTar(extractInputFileName, extractOutputDirName); err != nil {
+			panic(err)
+		}
+		fmt.Printf("extract tar %s %s\n", extractInputFileName, extractOutputDirName)
+	},
 }
 
 var extractTarGzCmd = &cobra.Command{
@@ -63,7 +79,7 @@ func extractZip(extractInputFileName, extractOutputDirName string) error {
 
 func copyZip(f *zip.File, extractOutputDirName string) error {
 	dir := filepath.Dir(f.Name)
-	if dir != "" {
+	if dir != "" && dir != "." {
 		if err := os.MkdirAll(filepath.Join(extractOutputDirName, dir), 0755); err != nil {
 			return err
 		}
@@ -87,4 +103,58 @@ func copyZip(f *zip.File, extractOutputDirName string) error {
 	}
 
 	return nil
+}
+
+func extractTar(extractInputFileName, extractOutputDirName string) error {
+	f, err := os.Open(extractInputFileName)
+	if err != nil {
+		return err
+	}
+
+	tarReader := tar.NewReader(f)
+
+	for {
+		isEOF, err := copyTar(tarReader, extractOutputDirName)
+		if err != nil {
+			return err
+		}
+		if isEOF {
+			break
+		}
+	}
+
+	return nil
+}
+
+func copyTar(tarReader *tar.Reader, extractOutputDirName string) (bool, error) {
+	hdr, err := tarReader.Next()
+	if err != nil {
+		if err == io.EOF {
+			return true, nil
+		}
+		return true, err
+	}
+
+	tarFileName := hdr.Name
+	fmt.Printf("tar file name: %s\n", tarFileName)
+
+	dir := filepath.Dir(tarFileName)
+	if dir != "" && dir != "." {
+		if err := os.MkdirAll(filepath.Join(extractOutputDirName, dir), 0755); err != nil {
+			return true, err
+		}
+		fmt.Printf("mkdir: %s\n", filepath.Join(extractOutputDirName, dir))
+	}
+
+	dst, err := os.Create(filepath.Join(extractOutputDirName, tarFileName))
+	if err != nil {
+		return true, err
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, tarReader); err != nil {
+		return true, err
+	}
+
+	return false, nil
 }
